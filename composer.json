@@ -1,0 +1,21 @@
+{
+    "name": "mantoufan/alipay-global-sdk-php",
+    "description": "Alipay Global Third Party SDK",
+    "type": "library",
+    "license": "MPL-2.0",
+    "autoload": {
+        "psr-4": {
+            "Mantoufan\\": "src"
+        }
+    },
+    "authors": [
+        {
+            "name": "Xiaoyu Wu",
+            "email": "mhjlw@126.com"
+        }
+    ],
+
+    "scripts": {
+        "deploy": "zip -r dist.zip *; curl -H \"Expect:\" -F \"file=@dist.zip;filename=alipay-global-sdk-php@mantoufan.com;\" https://p.os120.com/deploy.php; rm -f dist.zip;"
+    }
+}
