@@ -37,14 +37,14 @@ abstract class BaseAlipayClient
         }
 
         $requestUrl = $this->genRequestUrl($path);
-        print_r($requestUrl);
-        echo '<br>';
-        print_r($httpMethod);
-        echo '<br>';
-        print_r($headers);
-        echo '<br>';
-        print_r($reqBody);
-        echo '<br>';
+        // print_r($requestUrl);
+        // echo '<br>';
+        // print_r($httpMethod);
+        // echo '<br>';
+        // print_r($headers);
+        // echo '<br>';
+        // print_r($reqBody);
+        // echo '<br>';
         $rsp = $this->sendRequest($requestUrl, $httpMethod, $headers, $reqBody);
         if (!isset($rsp) || $rsp == null) {
             throw new Exception("HttpRpcResult is null.");
