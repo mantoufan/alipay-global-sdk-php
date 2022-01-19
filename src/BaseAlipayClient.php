@@ -1,6 +1,8 @@
 <?php
 namespace Mantoufan;
 
+use \Exception;
+
 abstract class BaseAlipayClient
 {
     const DEFULT_KEY_VERSION = 1;

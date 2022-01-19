@@ -14,13 +14,20 @@ use Mantoufan\model\ProductCodeType;
 use Mantoufan\model\SettlementStrategy;
 use Mantoufan\model\TerminalType;
 use Mantoufan\request\pay\AlipayPayRequest;
+use Mantoufan\response\NotifyResponse;
+use Mantoufan\SignatureTool;
 
 class AliPayGlobal
 {
-    public $alipayClient;
-    public $client_id;
-    public $is_sandbox;
-    public function __construct($params)
+    const PATHS = array(
+        'payments/pay' => '/ams/{sandbox}api/v1/payments/pay',
+    );
+    private $alipayClient;
+    private $client_id;
+    private $is_sandbox;
+    private $alipayPublicKey;
+
+    function __construct($params)
     {
         $params = array_merge(array(
             'client_id' => '',
@@ -29,27 +36,34 @@ class AliPayGlobal
             'alipayPublicKey' => '',
             'is_sandbox' => false,
         ), $params);
+        $this->alipayPublicKey = $params['alipayPublicKey'];
         $this->client_id = $params['client_id'];
         $this->is_sandbox = $params['is_sandbox'];
         $this->alipayClient = new DefaultAlipayClient(
             constant(Endpoint::class . '::' . $params['endpoint_area']),
             $params['merchantPrivateKey'],
-            $params['alipayPublicKey']
+            $this->alipayPublicKey
         );
     }
-    public static function CreateOredrId()
+
+    function CreateOredrId()
     {
         list($ms) = explode(' ', microtime());
         return 'ORDER-' . date('YmdHis') . ($ms * 1000000) . rand(00, 99);
     }
 
-    public static function CreatePaymentRequestId()
+    function CreatePaymentRequestId()
     {
         list($ms) = explode(' ', microtime());
         return 'PAY-' . date('YmdHis') . ($ms * 1000000) . rand(00, 99);
     }
 
-    public function checkout($params)
+    function getPath($key)
+    {
+        return str_replace('{sandbox}', $this->is_sandbox ? 'sandbox/' : '', self::PATHS[$key]);
+    }
+
+    function checkout($params)
     {
         $params = array_merge(array(
             'notify_url' => '',
@@ -71,9 +85,7 @@ class AliPayGlobal
         ), $params);
 
         $alipayPayRequest = new AlipayPayRequest();
-        $alipayPayRequest->setPath(
-            '/ams/' . ($this->is_sandbox ? 'sandbox' : '') . '/api/v1/payments/pay'
-        );
+        $alipayPayRequest->setPath($this->getPath('payments/pay'));
         $alipayPayRequest->setClientId($this->client_id);
 
         $alipayPayRequest->setProductCode(ProductCodeType::CASHIER_PAYMENT);
@@ -118,5 +130,22 @@ class AliPayGlobal
         } catch (Exception $e) {
             throw $e;
         }
+    }
+
+    function notify()
+    {
+        $notifyResponse = new NotifyResponse();
+        $response = $notifyResponse->getResponse();
+        var_dump($response);
+        $result = SignatureTool::verify(
+            $response->getHttpMethod(),
+            $this->getPath('payments/pay'),
+            $response->getClientId(),
+            $response->getRspTime(),
+            $response->getRspBody(),
+            $response->getSignature(),
+            $this->alipayPublicKey
+        );
+        var_dump($result);
     }
 }
