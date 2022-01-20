@@ -1,12 +1,12 @@
 <?php
 namespace Mantoufan\model;
 
-class Response
+class NotifyPaymentRequest
 {
     public $httpMethod;
     public $clientId;
-    public $rspTime;
-    public $rspBody;
+    public $rsqTime;
+    public $rsqBody;
     public $signature;
 
     public function getHttpMethod()
@@ -29,24 +29,24 @@ class Response
         $this->clientId = $clientId;
     }
 
-    public function getRspTime()
+    public function getRsqTime()
     {
-        return $this->rspTime;
+        return $this->rsqTime;
     }
 
-    public function setRspTime($rspTime)
+    public function setRsqTime($rsqTime)
     {
-        $this->rspTime = $rspTime;
+        $this->rsqTime = $rsqTime;
     }
 
-    public function getRspBody()
+    public function getRsqBody()
     {
-        return $this->rspBody;
+        return $this->rsqBody;
     }
 
-    public function setRspBody($rspBody)
+    public function setRsqBody($rsqBody)
     {
-        $this->rspBody = $rspBody;
+        $this->rsqBody = $rsqBody;
     }
 
     public function getSignature()

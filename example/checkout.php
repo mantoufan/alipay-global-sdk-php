@@ -7,11 +7,38 @@ $alipayGlobal = new Mantoufan\AliPayGlobal(array(
     'alipayPublicKey' => 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAihzSL26iayp+mj1ipXa7zdQoNDPhTBaxwJ08KZn3ja+G1eFJP445AmbZwGtASGJtbnctuav+ztElJvEU+NvNW3db+EvJXsb9QIj1Elgnt5WCvMDIhUQyDcp/b7WMRZlAyAWbO52sgA9ioAwaNS/jBPtb+8lx0s0bloAVleG7st8Wy7VTXrhOgpMZqsbQfE6dM4PiX7oeU+8NWGWR+pihLYTUsjaY2l+McusfQkBqKvp1bILljbVxBtT66dldCoEPxoCUN4kihwovXhkUzDbVhKFQ8fwrwOTWi2UgNnnMNrtH+cPcJCMz3WMcUaFy0cbQlyQmUbapI3moyPx20m+7jwIDAQAB',
     'is_sandbox' => true,
 ));
-$type = $_GET['type'] ?? 'request';
-route($type === 'request', function () use (&$alipayGlobal) {
+$type = $_GET['type'] ?? '';
+route($type === 'cashier', function () use (&$alipayGlobal) {
     try {
         $currentUrl = getCurrentUrl();
-        $result = $alipayGlobal->checkout(array(
+        $result = $alipayGlobal->cashier(array(
+            'notify_url' => setQueryParams($currentUrl, array('type' => 'notify')),
+            'return_url' => setQueryParams($currentUrl, array('type' => 'return')),
+            'amount' => array(
+                'currency' => 'USD',
+                'value' => '1',
+            ),
+            'order' => array(
+                'id' => null,
+                'desc' => 'Order Desc',
+                'extend_info' => array(
+                    'china_extra_trans_info' => array(
+                        'business_type' => 'MEMBERSHIP',
+                    ),
+                ),
+            ),
+            'payment_request_id' => null,
+        ));
+        header('Location: ' . $result->normalUrl);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
+});
+
+route($type === 'agreement', function () use (&$alipayGlobal) {
+    try {
+        $currentUrl = getCurrentUrl();
+        $result = $alipayGlobal->agreement(array(
             'notify_url' => setQueryParams($currentUrl, array('type' => 'notify')),
             'return_url' => setQueryParams($currentUrl, array('type' => 'return')),
             'amount' => array(
@@ -36,7 +63,14 @@ route($type === 'request', function () use (&$alipayGlobal) {
 });
 
 route($type === 'notify', function () use (&$alipayGlobal) {
-    $alipayGlobal->notify();
+    try {
+        $notify = $alipayGlobal->getNotify();
+        // do something
+
+        $alipayGlobal->sendNotifyResponseWithRSA();
+    } catch (Exception $e) {
+        echo $e->getMesssage();
+    }
 });
 
 route($type === 'return', function () {
