@@ -2,7 +2,7 @@
 namespace Mantoufan\request\notify;
 
 use Mantoufan\model\NotifyPaymentRequest;
-use Mantoufan\SignatureTool;
+use Mantoufan\tool\SignatureTool;
 
 class AlipayAcNotify
 {

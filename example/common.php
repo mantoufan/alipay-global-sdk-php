@@ -1,5 +1,6 @@
 <?php
 require '../vendor/autoload.php';
+require 'data/token.php';
 function route(bool $boolean, callable $callback)
 {
     if ($boolean) {

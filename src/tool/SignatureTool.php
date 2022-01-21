@@ -1,5 +1,5 @@
 <?php
-namespace Mantoufan;
+namespace Mantoufan\tool;
 
 class SignatureTool
 {

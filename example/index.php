@@ -1,4 +1,9 @@
 <?php
+
+use Mantoufan\model\CustomerBelongsTo;
+use Mantoufan\model\ScopeType;
+use Mantoufan\model\TerminalType;
+use Mantoufan\tool\IdTool;
 require 'common.php';
 $alipayGlobal = new Mantoufan\AliPayGlobal(array(
     'client_id' => 'SANDBOX_5Y3A2N2YEB3002022',
@@ -7,11 +12,12 @@ $alipayGlobal = new Mantoufan\AliPayGlobal(array(
     'alipayPublicKey' => 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAihzSL26iayp+mj1ipXa7zdQoNDPhTBaxwJ08KZn3ja+G1eFJP445AmbZwGtASGJtbnctuav+ztElJvEU+NvNW3db+EvJXsb9QIj1Elgnt5WCvMDIhUQyDcp/b7WMRZlAyAWbO52sgA9ioAwaNS/jBPtb+8lx0s0bloAVleG7st8Wy7VTXrhOgpMZqsbQfE6dM4PiX7oeU+8NWGWR+pihLYTUsjaY2l+McusfQkBqKvp1bILljbVxBtT66dldCoEPxoCUN4kihwovXhkUzDbVhKFQ8fwrwOTWi2UgNnnMNrtH+cPcJCMz3WMcUaFy0cbQlyQmUbapI3moyPx20m+7jwIDAQAB',
     'is_sandbox' => true,
 ));
+$currentUrl = getCurrentUrl();
 $type = $_GET['type'] ?? '';
-route($type === 'cashier', function () use (&$alipayGlobal) {
+route($type === 'pay/cashier', function () use (&$alipayGlobal) {
     try {
-        $currentUrl = getCurrentUrl();
-        $result = $alipayGlobal->cashier(array(
+        $result = $alipayGlobal->payCashier(array(
+            'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
             'notify_url' => setQueryParams($currentUrl, array('type' => 'notify')),
             'return_url' => setQueryParams($currentUrl, array('type' => 'return')),
             'amount' => array(
@@ -28,6 +34,11 @@ route($type === 'cashier', function () use (&$alipayGlobal) {
                 ),
             ),
             'payment_request_id' => null,
+            'settlement_strategy' => array(
+                'currency' => 'USD',
+            ),
+            'terminal_type' => TerminalType::WEB, // *
+            'os_type' => null,
         ));
         header('Location: ' . $result->normalUrl);
     } catch (Exception $e) {
@@ -35,10 +46,27 @@ route($type === 'cashier', function () use (&$alipayGlobal) {
     }
 });
 
-route($type === 'agreement', function () use (&$alipayGlobal) {
+route($type === 'auth/consult', function () use (&$alipayGlobal) {
+    $auth_state = IdTool::CreateAuthState();
+    $result = $alipayGlobal->authConsult(array(
+        'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
+        'auth_client_id' => null,
+        'auth_redirect_url' => setQueryParams($currentUrl, array('type' => 'auth/apply_token/auth_code')), // *
+        'scopes' => ScopeType::AGREEMENT_PAY, // *
+        'auth_state' => $auth_state, // *
+        'terminal_type' => TerminalType::WEB, // *
+        'os_type' => null,
+    ));
+});
+
+route($type === 'auth/apply_token/auth_code', function () use (&$alipayGlobal) {
+
+});
+
+route($type === 'pay/agreement', function () use (&$alipayGlobal) {
     try {
-        $currentUrl = getCurrentUrl();
-        $result = $alipayGlobal->agreement(array(
+        $result = $alipayGlobal->payAgreement(array(
+            'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
             'notify_url' => setQueryParams($currentUrl, array('type' => 'notify')),
             'return_url' => setQueryParams($currentUrl, array('type' => 'return')),
             'amount' => array(
@@ -54,8 +82,43 @@ route($type === 'agreement', function () use (&$alipayGlobal) {
                     ),
                 ),
             ),
+            'goods' => array(
+                array(
+                    'id' => null,
+                    'name' => 'Goods Name',
+                    'category' => null,
+                    'brand' => null,
+                    'unit_amount' => null,
+                    'quantity' => null,
+                    'sku_name' => null,
+                ),
+            ),
+            'merchant' => array(
+                'MCC' => null,
+                'name' => null,
+                'display_name' => null,
+                'address' => null,
+                'register_date' => null,
+                'store' => null,
+                'type' => null,
+            ),
+            'buyer' => array(
+                'id' => null,
+                'name' => array(
+                    'first_name' => null,
+                    'last_name' => null,
+                ),
+                'phone_no' => null,
+                'email' => null,
+            ),
             'payment_request_id' => null,
+            'settlement_strategy' => array(
+                'currency' => 'USD',
+            ),
+            'terminal_type' => TerminalType::WEB, // *
+            'os_type' => null,
         ));
+        var_dump($result);
         header('Location: ' . $result->normalUrl);
     } catch (Exception $e) {
         echo $e->getMessage();
@@ -69,7 +132,7 @@ route($type === 'notify', function () use (&$alipayGlobal) {
 
         $alipayGlobal->sendNotifyResponseWithRSA();
     } catch (Exception $e) {
-        echo $e->getMesssage();
+        echo $e->getMessage();
     }
 });
 

@@ -1,9 +1,9 @@
 <?php
-namespace Mantoufan;
+namespace Mantoufan\client;
 
 use Mantoufan\model\HttpRpcResult;
 
-class DefaultAlipayClient extends BaseAlipayClient
+class AcAlipayClient extends BaseAlipayClient
 {
     public function __construct($gatewayUrl, $merchantPrivateKey, $alipayPublicKey)
     {

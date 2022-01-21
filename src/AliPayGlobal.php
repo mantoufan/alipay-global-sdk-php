@@ -1,21 +1,23 @@
 <?php
 namespace Mantoufan;
 
-use Mantoufan\DefaultAlipayClient;
+use Mantoufan\client\AcAlipayClient;
 use Mantoufan\model\Amount;
+use Mantoufan\model\Buyer;
 use Mantoufan\model\ChinaExtraTransInfo;
-use Mantoufan\model\CustomerBelongsTo;
 use Mantoufan\model\Endpoint;
 use Mantoufan\model\Env;
 use Mantoufan\model\ExtendInfo;
+use Mantoufan\model\Goods;
+use Mantoufan\model\Merchant;
 use Mantoufan\model\Order;
 use Mantoufan\model\PaymentMethod;
 use Mantoufan\model\ProductCodeType;
 use Mantoufan\model\SettlementStrategy;
-use Mantoufan\model\TerminalType;
+use Mantoufan\request\auth\AlipayAuthConsultRequest;
 use Mantoufan\request\notify\AlipayAcNotify;
 use Mantoufan\request\pay\AlipayPayRequest;
-use Mantoufan\SignatureTool;
+use Mantoufan\tool\SignatureTool;
 use \Exception;
 
 class AliPayGlobal
@@ -42,23 +44,11 @@ class AliPayGlobal
         $this->merchantPrivateKey = $params['merchantPrivateKey'];
         $this->client_id = $params['client_id'];
         $this->is_sandbox = $params['is_sandbox'];
-        $this->alipayClient = new DefaultAlipayClient(
+        $this->alipayClient = new AcAlipayClient(
             constant(Endpoint::class . '::' . $params['endpoint_area']),
             $this->merchantPrivateKey,
             $this->alipayPublicKey
         );
-    }
-
-    function CreateOredrId()
-    {
-        list($ms) = explode(' ', microtime());
-        return 'ORDER-' . date('YmdHis') . ($ms * 1000000) . rand(00, 99);
-    }
-
-    function CreatePaymentRequestId()
-    {
-        list($ms) = explode(' ', microtime());
-        return 'PAY-' . date('YmdHis') . ($ms * 1000000) . rand(00, 99);
     }
 
     function getPath($key)
@@ -66,25 +56,31 @@ class AliPayGlobal
         return str_replace('{sandbox}', $this->is_sandbox ? 'sandbox/' : '', self::PATHS[$key]);
     }
 
-    function cashier($params)
+    function payCashier($params)
     {
         $params = array_merge(array(
-            'notify_url' => '',
-            'return_url' => '',
+            'notify_url' => null,
+            'return_url' => null,
             'amount' => array(
-                'currency' => 'USD',
-                'value' => '',
+                'currency' => null,
+                'value' => null,
             ),
             'order' => array(
                 'id' => null,
-                'desc' => '',
+                'desc' => null,
                 'extend_info' => array(
                     'china_extra_trans_info' => array(
-                        'business_type' => '',
+                        'business_type' => null,
                     ),
                 ),
             ),
             'payment_request_id' => null,
+            'settlement_strategy' => array(
+                'currency' => null,
+            ),
+            'terminal_type' => null,
+            'os_type' => null,
+            'os_version' => null,
         ), $params);
 
         $alipayPayRequest = new AlipayPayRequest();
@@ -94,10 +90,10 @@ class AliPayGlobal
         $alipayPayRequest->setProductCode(ProductCodeType::CASHIER_PAYMENT);
         $alipayPayRequest->setPaymentNotifyUrl($params['notify_url']);
         $alipayPayRequest->setPaymentRedirectUrl($params['return_url']);
-        $alipayPayRequest->setPaymentRequestId($params['payment_request_id'] ?? self::CreatePaymentRequestId());
+        $alipayPayRequest->setPaymentRequestId($params['payment_request_id'] ?? IdTool::CreatePaymentRequestId());
 
         $paymentMethod = new PaymentMethod();
-        $paymentMethod->setPaymentMethodType(CustomerBelongsTo::ALIPAY_CN);
+        $paymentMethod->setPaymentMethodType($params['customer_belongs_to']);
         $alipayPayRequest->setPaymentMethod($paymentMethod);
 
         $amount = new Amount();
@@ -106,7 +102,7 @@ class AliPayGlobal
 
         $order = new Order();
         $order->setOrderDescription($params['order']['desc']);
-        $order->setReferenceOrderId($params['order']['id'] ?? self::CreateOredrId());
+        $order->setReferenceOrderId($params['order']['id'] ?? IdTool::CreateReferenceOrderId());
         $order->setOrderAmount($amount);
 
         $chinaExtraTransInfo = new ChinaExtraTransInfo();
@@ -118,14 +114,15 @@ class AliPayGlobal
         $order->setExtendInfo($extendInfo . '');
 
         $env = new Env();
-        $env->setTerminalType(TerminalType::WEB);
+        $env->setTerminalType($params['terminal_type']);
+        $env->setOsType($params['os_type']);
         $order->setEnv($env);
 
         $alipayPayRequest->setPaymentAmount($amount);
         $alipayPayRequest->setOrder($order);
 
         $settlementStrategy = new SettlementStrategy();
-        $settlementStrategy->setSettlementCurrency($params['amount']['currency']);
+        $settlementStrategy->setSettlementCurrency($params['settlement_strategy']['currency']);
         $alipayPayRequest->setSettlementStrategy($settlementStrategy);
 
         try {
@@ -149,7 +146,7 @@ class AliPayGlobal
             $this->alipayPublicKey
         );
         if ($result === 0) {
-            throw Exception('Invalid Signature');
+            throw new Exception('Invalid Signature');
         }
         return $notifyPaymentRequest;
     }
@@ -168,25 +165,91 @@ class AliPayGlobal
         ));
     }
 
-    function agreement($params)
+    function authConsult($params)
     {
         $params = array_merge(array(
-            'notify_url' => '',
-            'return_url' => '',
+            'customer_belongs_to' => null, // *
+            'auth_client_id' => null,
+            'auth_redirect_url' => null, // *
+            'scopes' => null, // *
+            'auth_state' => null, // *
+            'terminal_type' => null, // *
+            'os_type' => null,
+            'os_version' => null,
+        ), $params);
+        $alipayAuthConsultRequest = new AlipayAuthConsultRequest();
+        $alipayAuthConsultRequest->setCustomerBelongsTo($params['customer_belongs_to']);
+        $alipayAuthConsultRequest->setAuthClientId($params['auth_client_id']);
+        $alipayAuthConsultRequest->setAuthRedirectUrl($params['auth_redirect_url']);
+        $alipayAuthConsultRequest->setScopes($params['scopes']);
+        $alipayAuthConsultRequest->setAuthState($params['auth_state'] ?? IdTool::CreateAuthState());
+        $alipayAuthConsultRequest->setTerminalType($params['terminal_type']);
+        $alipayAuthConsultRequest->setOsType($params['os_type']);
+        $alipayAuthConsultRequest->setOsVersion($params['os_version']);
+
+        try {
+            return $this->alipayClient->execute($alipayAuthConsultRequest);
+        } catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    function authApplyToken()
+    {
+
+    }
+
+    function payAgreement($params)
+    {
+        $params = array_merge(array(
+            'notify_url' => null,
+            'return_url' => null,
             'amount' => array(
-                'currency' => 'USD',
-                'value' => '',
+                'currency' => null,
+                'value' => null,
             ),
             'order' => array(
                 'id' => null,
-                'desc' => '',
+                'desc' => null,
                 'extend_info' => array(
                     'china_extra_trans_info' => array(
-                        'business_type' => '',
+                        'business_type' => null,
                     ),
                 ),
             ),
+            'goods' => array(
+                array(
+                    'id' => null,
+                    'name' => null,
+                    'category' => null,
+                    'brand' => null,
+                    'unit_amount' => null,
+                    'quantity' => null,
+                    'sku_name' => null,
+                ),
+            ),
+            'merchant' => array(
+                'MCC' => null,
+                'name' => null,
+                'display_name' => null,
+                'address' => null,
+                'register_date' => null,
+                'store' => null,
+                'type' => null,
+            ),
+            'buyer' => array(
+                'id' => null,
+                'name' => array(
+                    'first_name' => null,
+                    'last_name' => null,
+                ),
+                'phone_no' => null,
+                'email' => null,
+            ),
             'payment_request_id' => null,
+            'settlement_strategy' => array(
+                'currency' => null,
+            ),
         ), $params);
 
         $alipayPayRequest = new AlipayPayRequest();
@@ -196,19 +259,21 @@ class AliPayGlobal
         $alipayPayRequest->setProductCode(ProductCodeType::AGREEMENT_PAYMENT);
         $alipayPayRequest->setPaymentNotifyUrl($params['notify_url']);
         $alipayPayRequest->setPaymentRedirectUrl($params['return_url']);
-        $alipayPayRequest->setPaymentRequestId($params['payment_request_id'] ?? self::CreatePaymentRequestId());
+        $alipayPayRequest->setPaymentRequestId($params['payment_request_id'] ?? IdTool::CreatePaymentRequestId());
 
         $paymentMethod = new PaymentMethod();
-        $paymentMethod->setPaymentMethodType(CustomerBelongsTo::ALIPAY_CN);
+        $paymentMethod->setPaymentMethodType($params['customer_belongs_to']);
+        $paymentMethod->setPaymentMethodId();
         $alipayPayRequest->setPaymentMethod($paymentMethod);
 
         $amount = new Amount();
         $amount->setCurrency($params['amount']['currency']);
         $amount->setValue($params['amount']['value']);
+        $alipayPayRequest->setPaymentAmount($amount);
 
         $order = new Order();
         $order->setOrderDescription($params['order']['desc']);
-        $order->setReferenceOrderId($params['order']['id'] ?? self::CreateOredrId());
+        $order->setReferenceOrderId($params['order']['id'] ?? IdTool::CreateReferenceOrderId());
         $order->setOrderAmount($amount);
 
         $chinaExtraTransInfo = new ChinaExtraTransInfo();
@@ -220,15 +285,54 @@ class AliPayGlobal
         $order->setExtendInfo($extendInfo . '');
 
         $env = new Env();
-        $env->setTerminalType(TerminalType::WEB);
+        $env->setTerminalType($params['terminal_type']);
+        $env->setOsType($params['os_type']);
         $order->setEnv($env);
 
-        $alipayPayRequest->setPaymentAmount($amount);
+        $goodsArr = array();
+        if (!empty($params['goods'])) {
+            foreach ($params['goods'] as $good) {
+                $goods = new Goods();
+                $goods->setReferenceGoodsId($good['id'] ?? IdTool::CreateReferenceGoodsId());
+                $goods->setGoodsName($good['name']);
+                $goods->setGoodsCategory($good['category']);
+                $goods->setGoodsBrand($good['brand']);
+                $goods->setGoodsUnitAmount($good['unit_amount']);
+                $goods->setGoodsQuantity($good['quantity']);
+                $goods->setGoodsSkuName($good['sku_name']);
+                $goodsArr[] = $goods;
+            }
+            $order->setGoods($goodsArr);
+        }
+        if (!empty($params['merchant'])) {
+            $merchant = new Merchant();
+            $merchant->setReferenceMerchantId($params['merchant']['id'] ?? IdTool::CreateReferenceMerchantId());
+            $merchant->setMerchantMCC($params['merchant']['MCC']);
+            $merchant->setMerchantName($params['merchant']['name']);
+            $merchant->setMerchantDisplayName($params['merchant']['display_name']);
+            $merchant->setMerchantAddress($params['merchant']['address']);
+            $merchant->setMerchantRegisterDate($params['merchant']['register_date']);
+            $merchant->setStore($params['merchant']['store']);
+            $merchant->setMerchantType($params['merchant']['type']);
+            $order->setMerchant($merchant);
+        }
+
+        if (!empty($params['buyer'])) {
+            $buyer = new Buyer();
+            $buyer->setReferenceBuyerId($params['buyer']['id'] ?? IdTool::CreateBuyerId());
+            $buyer->setBuyerName($params['buyer']['name']);
+            $buyer->setBuyerPhoneNo($params['buyer']['phone_no']);
+            $buyer->setBuyerEmail($params['buyer']['email']);
+            $order->setBuyer($buyer);
+        }
+
         $alipayPayRequest->setOrder($order);
 
         $settlementStrategy = new SettlementStrategy();
-        $settlementStrategy->setSettlementCurrency($params['amount']['currency']);
+        $settlementStrategy->setSettlementCurrency($params['settlement_strategy']['currency']);
         $alipayPayRequest->setSettlementStrategy($settlementStrategy);
+
+        $alipayPayRequest->setIsAuthorization(true);
 
         try {
             return $this->alipayClient->execute($alipayPayRequest);

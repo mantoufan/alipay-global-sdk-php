@@ -1,6 +1,7 @@
 <?php
-namespace Mantoufan;
+namespace Mantoufan\client;
 
+use Mantoufan\tool\SignatureTool;
 use \Exception;
 
 abstract class BaseAlipayClient
