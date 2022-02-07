@@ -1,6 +1,6 @@
 <?php
-
 use Mantoufan\model\CustomerBelongsTo;
+use Mantoufan\model\GrantType;
 use Mantoufan\model\ScopeType;
 use Mantoufan\model\TerminalType;
 use Mantoufan\tool\IdTool;
@@ -14,7 +14,7 @@ $alipayGlobal = new Mantoufan\AliPayGlobal(array(
 ));
 $currentUrl = getCurrentUrl();
 $type = $_GET['type'] ?? '';
-route($type === 'pay/cashier', function () use (&$alipayGlobal) {
+route($type === 'pay/cashier', function () use (&$alipayGlobal, $currentUrl) {
     try {
         $result = $alipayGlobal->payCashier(array(
             'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
@@ -46,27 +46,76 @@ route($type === 'pay/cashier', function () use (&$alipayGlobal) {
     }
 });
 
-route($type === 'auth/consult', function () use (&$alipayGlobal) {
+route($type === 'auth/consult', function () use (&$alipayGlobal, $currentUrl) {
     $auth_state = IdTool::CreateAuthState();
-    $result = $alipayGlobal->authConsult(array(
-        'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
-        'auth_client_id' => null,
-        'auth_redirect_url' => setQueryParams($currentUrl, array('type' => 'auth/apply_token/auth_code')), // *
-        'scopes' => ScopeType::AGREEMENT_PAY, // *
-        'auth_state' => $auth_state, // *
-        'terminal_type' => TerminalType::WEB, // *
-        'os_type' => null,
-    ));
+    try {
+        $result = $alipayGlobal->authConsult(array(
+            'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
+            'auth_client_id' => null,
+            'auth_redirect_url' => setQueryParams($currentUrl, array('type' => 'auth/apply_token/auth_code')), // *
+            'scopes' => array(ScopeType::AGREEMENT_PAY), // *
+            'auth_state' => $auth_state, // *
+            'terminal_type' => TerminalType::WEB, // *
+            'os_type' => null,
+        ));
+        header('Location: ' . $result->normalUrl);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
 });
 
 route($type === 'auth/apply_token/auth_code', function () use (&$alipayGlobal) {
+    $auth_code = $_GET['authCode'] ?? '';
+    try {
+        $result = $alipayGlobal->authApplyToken(array(
+            'grant_type' => GrantType::AUTHORIZATION_CODE,
+            'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN,
+            'auth_code' => $auth_code,
+            'refresh_token' => null,
+        ));
 
+        $access_token = $result->accessToken;
+        $access_token_expiry_time = $result->accessTokenExpiryTime;
+        $refresh_token = $result->refreshToken;
+        $refresh_token_expiry_time = $result->refreshTokenExpiryTime;
+        session_start();
+        $_SESSION['access_token'] = $access_token;
+
+        var_dump($result);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
 });
 
-route($type === 'pay/agreement', function () use (&$alipayGlobal) {
+route($type === 'auth/apply_token/refresh_token', function () use (&$alipayGlobal) {
+    $refresh_token = $_GET['refreshToken'] ?? '';
     try {
+        $result = $alipayGlobal->authApplyToken(array(
+            'grant_type' => GrantType::AUTHORIZATION_CODE,
+            'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN,
+            'auth_code' => null,
+            'refresh_token' => $refresh_token,
+        ));
+
+        $access_token = $result->accessToken;
+        $access_token_expiry_time = $result->accessTokenExpiryTime;
+        $refresh_token = $result->refreshToken;
+        $refresh_token_expiry_time = $result->refreshTokenExpiryTime;
+        session_start();
+        $_SESSION['access_token'] = $result->accessToken;
+
+        var_dump($result);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
+});
+
+route($type === 'pay/agreement', function () use (&$alipayGlobal, $currentUrl) {
+    try {
+        session_start();
         $result = $alipayGlobal->payAgreement(array(
-            'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
+            'access_token' => $_SESSION['access_token'],
+            // 'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
             'notify_url' => setQueryParams($currentUrl, array('type' => 'notify')),
             'return_url' => setQueryParams($currentUrl, array('type' => 'return')),
             'amount' => array(
@@ -105,13 +154,17 @@ route($type === 'pay/agreement', function () use (&$alipayGlobal) {
             'buyer' => array(
                 'id' => null,
                 'name' => array(
-                    'first_name' => null,
-                    'last_name' => null,
+                    'first_name' => 'David', // *
+                    'last_name' => 'Chen', // *
                 ),
                 'phone_no' => null,
                 'email' => null,
             ),
             'payment_request_id' => null,
+            'payment_method' => array(
+                'payment_method_type' => CustomerBelongsTo::ALIPAY_CN, // *
+                'payment_method_id' => $_SESSION['access_token'], // *
+            ),
             'settlement_strategy' => array(
                 'currency' => 'USD',
             ),
@@ -138,4 +191,20 @@ route($type === 'notify', function () use (&$alipayGlobal) {
 
 route($type === 'return', function () {
     echo 'Payment completed';
+});
+
+route($type === 'notify/auth/auth_code', function () use (&$alipayGlobal) {
+    try {
+        $notify = $alipayGlobal->getNotify();
+        // do something
+        $rsqBody = $notify->getRsqBody();
+        $authorization_notify_type = $reqBody->authorizationNotifyType;
+        if ($authorization_notify_type === 'AUTHCODE_CREATED') {
+            $_SESSION['auth_code'] = $reqBody->authCode;
+        }
+
+        $alipayGlobal->sendNotifyResponseWithRSA();
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
 });

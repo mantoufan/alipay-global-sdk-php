@@ -21,6 +21,7 @@ class AlipayPayRequest extends AlipayRequest
     public $extendInfo;
     public $creditPayPlan;
     public $settlementStrategy;
+    public $accessToken;
 
     /**
      * @return mixed

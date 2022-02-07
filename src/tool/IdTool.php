@@ -3,43 +3,43 @@ namespace Mantoufan\tool;
 
 class IdTool
 {
-    public function CreateId()
+    public static function CreateId()
     {
         list($ms) = explode(' ', microtime());
         return date('YmdHis') . ($ms * 1000000) . rand(00, 99);
     }
 
-    public function CreateReferenceOrderId()
+    public static function CreateReferenceOrderId()
     {
         return 'ORDER-' . self::CreateId();
     }
 
-    public function CreatePaymentRequestId()
+    public static function CreatePaymentRequestId()
     {
         return 'PAYMENT-' . self::CreateId();
     }
 
-    public function CreatePaymentMethodId()
+    public static function CreatePaymentMethodId()
     {
         return 'PAYMENTMETHOD-' . self::CreateId();
     }
 
-    public function CreateBuyerId()
+    public static function CreateBuyerId()
     {
         return 'BUYER-' . self::CreateId();
     }
 
-    public function CreateReferenceGoodsId()
+    public static function CreateReferenceGoodsId()
     {
         return 'GOODS-' . self::CreateId();
     }
 
-    public function CreateReferenceMerchantId()
+    public static function CreateReferenceMerchantId()
     {
         return 'MERCHANT-' . self::CreateId();
     }
 
-    public function CreateAuthState()
+    public static function CreateAuthState()
     {
         return 'STATE-' . self::CreateId();
     }

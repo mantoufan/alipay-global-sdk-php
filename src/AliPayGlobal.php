@@ -14,24 +14,25 @@ use Mantoufan\model\Order;
 use Mantoufan\model\PaymentMethod;
 use Mantoufan\model\ProductCodeType;
 use Mantoufan\model\SettlementStrategy;
+use Mantoufan\request\auth\AlipayAuthApplyTokenRequest;
 use Mantoufan\request\auth\AlipayAuthConsultRequest;
 use Mantoufan\request\notify\AlipayAcNotify;
 use Mantoufan\request\pay\AlipayPayRequest;
+use Mantoufan\tool\IdTool;
 use Mantoufan\tool\SignatureTool;
 use \Exception;
 
 class AliPayGlobal
 {
-    const PATHS = array(
-        'payments/pay' => '/ams/{sandbox}api/v1/payments/pay',
-    );
+    const PATH_PREFIX = '/ams/{sandbox}api/v1/';
+
     private $alipayClient;
     private $client_id;
     private $is_sandbox;
     private $alipayPublicKey;
     private $merchantPrivateKey;
 
-    function __construct($params)
+    public function __construct($params)
     {
         $params = array_merge(array(
             'client_id' => '',
@@ -51,12 +52,12 @@ class AliPayGlobal
         );
     }
 
-    function getPath($key)
+    public function getPath($key)
     {
-        return str_replace('{sandbox}', $this->is_sandbox ? 'sandbox/' : '', self::PATHS[$key]);
+        return str_replace('{sandbox}', $this->is_sandbox ? 'sandbox/' : '', self::PATH_PREFIX . $key);
     }
 
-    function payCashier($params)
+    public function payCashier($params)
     {
         $params = array_merge(array(
             'notify_url' => null,
@@ -132,7 +133,7 @@ class AliPayGlobal
         }
     }
 
-    function getNotify()
+    public function getNotify()
     {
         $alipayAcNotify = new AlipayAcNotify();
         $notifyPaymentRequest = $alipayAcNotify->getNotifyPaymentRequest();
@@ -151,13 +152,13 @@ class AliPayGlobal
         return $notifyPaymentRequest;
     }
 
-    function sendNotifyResponse()
+    public function sendNotifyResponse()
     {
         $alipayAcNotify = new AlipayAcNotify();
         $alipayAcNotify->sendNotifyResponse();
     }
 
-    function sendNotifyResponseWithRSA()
+    public function sendNotifyResponseWithRSA()
     {
         $alipayAcNotify = new AlipayAcNotify();
         $alipayAcNotify->sendNotifyResponseWithRSA(array(
@@ -165,7 +166,7 @@ class AliPayGlobal
         ));
     }
 
-    function authConsult($params)
+    public function authConsult($params)
     {
         $params = array_merge(array(
             'customer_belongs_to' => null, // *
@@ -178,6 +179,9 @@ class AliPayGlobal
             'os_version' => null,
         ), $params);
         $alipayAuthConsultRequest = new AlipayAuthConsultRequest();
+        $alipayAuthConsultRequest->setPath($this->getPath('authorizations/consult'));
+        $alipayAuthConsultRequest->setClientId($this->client_id);
+
         $alipayAuthConsultRequest->setCustomerBelongsTo($params['customer_belongs_to']);
         $alipayAuthConsultRequest->setAuthClientId($params['auth_client_id']);
         $alipayAuthConsultRequest->setAuthRedirectUrl($params['auth_redirect_url']);
@@ -194,12 +198,32 @@ class AliPayGlobal
         }
     }
 
-    function authApplyToken()
+    public function authApplyToken($params)
     {
+        $params = array_merge(array(
+            'grant_type' => null, // *
+            'customer_belongs_to' => null,
+            'auth_code' => null, // *
+            'refresh_token' => null, // *
+        ), $params);
 
+        $AlipayAuthApplyTokenRequest = new AlipayAuthApplyTokenRequest();
+        $AlipayAuthApplyTokenRequest->setPath($this->getPath('authorizations/applyToken'));
+        $AlipayAuthApplyTokenRequest->setClientId($this->client_id);
+
+        $AlipayAuthApplyTokenRequest->setGrantType($params['grant_type']);
+        $AlipayAuthApplyTokenRequest->setCustomerBelongsTo($params['customer_belongs_to']);
+        $AlipayAuthApplyTokenRequest->setAuthCode($params['auth_code']);
+        $AlipayAuthApplyTokenRequest->setRefreshToken($params['refresh_token']);
+
+        try {
+            return $this->alipayClient->execute($AlipayAuthApplyTokenRequest);
+        } catch (Exception $e) {
+            throw $e;
+        }
     }
 
-    function payAgreement($params)
+    public function payAgreement($params)
     {
         $params = array_merge(array(
             'notify_url' => null,
@@ -247,6 +271,10 @@ class AliPayGlobal
                 'email' => null,
             ),
             'payment_request_id' => null,
+            'payment_method' => array(
+                'payment_method_type' => null,
+                'payment_method_id' => null,
+            ),
             'settlement_strategy' => array(
                 'currency' => null,
             ),
@@ -262,8 +290,8 @@ class AliPayGlobal
         $alipayPayRequest->setPaymentRequestId($params['payment_request_id'] ?? IdTool::CreatePaymentRequestId());
 
         $paymentMethod = new PaymentMethod();
-        $paymentMethod->setPaymentMethodType($params['customer_belongs_to']);
-        $paymentMethod->setPaymentMethodId();
+        $paymentMethod->setPaymentMethodType($params['payment_method']['payment_method_type']);
+        $paymentMethod->setPaymentMethodId($params['payment_method']['payment_method_id']);
         $alipayPayRequest->setPaymentMethod($paymentMethod);
 
         $amount = new Amount();
