@@ -91,7 +91,7 @@ route($type === 'auth/apply_token/refresh_token', function () use (&$alipayGloba
     $refresh_token = $_GET['refreshToken'] ?? '';
     try {
         $result = $alipayGlobal->authApplyToken(array(
-            'grant_type' => GrantType::AUTHORIZATION_CODE,
+            'grant_type' => GrantType::REFRESH_TOKEN,
             'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN,
             'auth_code' => null,
             'refresh_token' => $refresh_token,
@@ -114,8 +114,6 @@ route($type === 'pay/agreement', function () use (&$alipayGlobal, $currentUrl) {
     try {
         session_start();
         $result = $alipayGlobal->payAgreement(array(
-            'access_token' => $_SESSION['access_token'],
-            // 'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
             'notify_url' => setQueryParams($currentUrl, array('type' => 'notify')),
             'return_url' => setQueryParams($currentUrl, array('type' => 'return')),
             'amount' => array(
@@ -172,7 +170,6 @@ route($type === 'pay/agreement', function () use (&$alipayGlobal, $currentUrl) {
             'os_type' => null,
         ));
         var_dump($result);
-        header('Location: ' . $result->normalUrl);
     } catch (Exception $e) {
         echo $e->getMessage();
     }
