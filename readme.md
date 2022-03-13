@@ -1,7 +1,7 @@
 # Alipay Global SDK PHP
 ## Alipay Global A+ SDK
 This project is based on [Alipay Global Offical PHP SDK](https://github.com/alipay/global-open-sdk-php)  
-Since the official SDK mainly shows how to access the alipay gateway and does not contain complete functions such as authorization and withholding, I have added some logic and further realized the standard interface of Alipay Global A+
+Since the official SDK mainly shows how to access the alipay gateway and does not contain complete functions such as authorization and auto debit, I have added some logic and further realized the standard interface of Alipay Global A+
 ## Demo
 The use and functionality of the SDK have been shown with **Examples** in the project folder
 ## Use
