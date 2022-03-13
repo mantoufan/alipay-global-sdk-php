@@ -187,7 +187,7 @@ route($type === 'notify', function () use (&$alipayGlobal) {
 });
 
 route($type === 'return', function () {
-    echo 'Payment completed';
+    echo 'Payment or Authorization completed';
 });
 
 route($type === 'notify/auth/auth_code', function () use (&$alipayGlobal) {
