@@ -14,8 +14,7 @@
             "email": "mhjlw@126.com"
         }
     ],
-
     "scripts": {
-        "deploy": "zip -r dist.zip *; curl -H \"Expect:\" -F \"file=@dist.zip;filename=alipay-global-sdk-php@mantoufan.com;\" https://p.os120.com/deploy.php; rm -f dist.zip;"
+        "deploy": "zip -r dist.zip *; curl -H \"Expect:\" -F \"file=@dist.zip;filename=alipay-global-sdk-php@mantoufan.com;\" https://p.yzhan.co/deploy.php; rm -f dist.zip;"
     }
 }
