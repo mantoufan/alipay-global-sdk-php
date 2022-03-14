@@ -5,7 +5,7 @@ use Mantoufan\model\ScopeType;
 use Mantoufan\model\TerminalType;
 use Mantoufan\tool\IdTool;
 require 'common.php';
-$config = include 'data/config.php';
+$config = include 'data/config.php'; // You can create or directly fill in the following values
 $alipayGlobal = new Mantoufan\AliPayGlobal(array(
     'client_id' => $config['client_id'],
     'endpoint_area' => 'ASIA',
