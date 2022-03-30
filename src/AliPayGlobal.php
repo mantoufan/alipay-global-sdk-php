@@ -18,6 +18,7 @@ use Mantoufan\request\auth\AlipayAuthApplyTokenRequest;
 use Mantoufan\request\auth\AlipayAuthConsultRequest;
 use Mantoufan\request\notify\AlipayAcNotify;
 use Mantoufan\request\pay\AlipayPayRequest;
+use Mantoufan\request\pay\AlipayRefundRequest;
 use Mantoufan\tool\IdTool;
 use Mantoufan\tool\SignatureTool;
 use \Exception;
@@ -364,6 +365,32 @@ class AliPayGlobal
 
         try {
             return $this->alipayClient->execute($alipayPayRequest);
+        } catch (Exception $e) {
+            throw $e;
+        }
+    }
+
+    public function sendRefund($params)
+    {
+        $params = array_merge(array(
+            'paymentId' => null,
+            'refundRequestId' => null,
+            'refundAmount' => array(
+                'currency' => null,
+                'value' => null,
+            )
+        ), $params);
+
+        $alipayRefundRequest = new AlipayRefundRequest();
+        $alipayRefundRequest->setPath($this->getPath('payments/refund'));
+        $alipayRefundRequest->setClientId($this->client_id);
+
+        $alipayRefundRequest->setRefundRequestId($params['refundRequestId']);
+        $alipayRefundRequest->setPaymentId($params['paymentId']);
+        $alipayRefundRequest->setRefundAmount($params['refundAmount']);
+
+        try {
+            return $this->alipayClient->execute($alipayRefundRequest);
         } catch (Exception $e) {
             throw $e;
         }
