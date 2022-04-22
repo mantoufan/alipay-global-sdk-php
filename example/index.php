@@ -206,3 +206,19 @@ route($type === 'notify/auth/auth_code', function () use (&$alipayGlobal) {
         echo $e->getMessage();
     }
 });
+
+route($type === 'refund/refund_online', function () use (&$alipayGlobal) {
+    try {
+        $result = $alipayGlobal->sendRefund(array(
+            'paymentId' => '20181129190741010007000000XXXX',
+            'refundRequestId' => 'S7mMoYxQxWjJDWwm2NG4WxmNbM5z3GvSB6PEPvMeYP21PQUtrX9hXlgbQMajt2on',
+            'refundAmount' => array(
+                'currency' => 'USD',
+                'value' => '100',
+            )
+        ));
+        var_dump($result);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
+});

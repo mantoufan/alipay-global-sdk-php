@@ -210,7 +210,7 @@ try {
 }
 ```
 ### Online Payment - Authorization - NotifyAuthorization
-API: [ac/ams/notifyauth](https://global.alipay.com/docs/ac/ams/notifyauth)
+API: [ac/ams/notifyauth](https://global.alipay.com/docs/ac/ams/notifyauth)  
 DEMO: [notify/auth/auth_code](https://p.yzhan.co/alipay-global-sdk-php/example/?type=notify/auth/auth_code)
 ```php
 try {
@@ -225,6 +225,24 @@ try {
     $alipayGlobal->sendNotifyResponseWithRSA(); // Tell Alipay Global the notice has been received and there is no need to send it again
 } catch (Exception $e) {
     echo $e->getMessage(); // Output Error
+}
+```
+### Online Payment - Refund - Refund
+API: [ac/ams/refund_online](https://global.alipay.com/docs/ac/ams/refund_online)  
+DEMO: [refund/refund_online](https://p.yzhan.co/alipay-global-sdk-php/example/?type=refund/refund_online)  
+```php
+try {
+    $result = $alipayGlobal->sendRefund(array(
+        'paymentId' => '20181129190741010007000000XXXX', // Unique ID assigned by Alipay for the original payment to be refunded.
+        'refundRequestId' => 'S7mMoYxQxWjJDWwm2NG4WxmNbM5z3GvSB6PEPvMeYP21PQUtrX9hXlgbQMajt2on', // Unique ID assigned by the merchant to identify a refund request.
+        'refundAmount' => array(
+            'currency' => 'USD', // Currency of refund
+            'value' => '100', // Amount of refund
+        )
+    ));
+    var_dump($result);
+} catch (Exception $e) {
+    echo $e->getMessage();
 }
 ```
 ### Return Url
