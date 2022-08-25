@@ -14,8 +14,10 @@ $alipayGlobal = new Mantoufan\AliPayGlobal(array(
     'is_sandbox' => true,
 ));
 $currentUrl = getCurrentUrl();
+/* Webman: please pass (Request $request)
+   $currentUrl = getCurrentUrl(array('webman' => array('request' => $request))); */
 $type = $_GET['type'] ?? '';
-route($type === 'pay/cashier', function () use (&$alipayGlobal, $currentUrl) {
+routeMap($type === 'pay/cashier', function () use (&$alipayGlobal, $currentUrl) {
     try {
         $result = $alipayGlobal->payCashier(array(
             'customer_belongs_to' => CustomerBelongsTo::ALIPAY_CN, // *
@@ -47,7 +49,7 @@ route($type === 'pay/cashier', function () use (&$alipayGlobal, $currentUrl) {
     }
 });
 
-route($type === 'auth/consult', function () use (&$alipayGlobal, $currentUrl) {
+routeMap($type === 'auth/consult', function () use (&$alipayGlobal, $currentUrl) {
     $auth_state = IdTool::CreateAuthState();
     try {
         $result = $alipayGlobal->authConsult(array(
@@ -65,7 +67,7 @@ route($type === 'auth/consult', function () use (&$alipayGlobal, $currentUrl) {
     }
 });
 
-route($type === 'auth/apply_token/auth_code', function () use (&$alipayGlobal) {
+routeMap($type === 'auth/apply_token/auth_code', function () use (&$alipayGlobal) {
     $auth_code = $_GET['authCode'] ?? '';
     try {
         $result = $alipayGlobal->authApplyToken(array(
@@ -88,7 +90,7 @@ route($type === 'auth/apply_token/auth_code', function () use (&$alipayGlobal) {
     }
 });
 
-route($type === 'auth/apply_token/refresh_token', function () use (&$alipayGlobal) {
+routeMap($type === 'auth/apply_token/refresh_token', function () use (&$alipayGlobal) {
     $refresh_token = $_GET['refreshToken'] ?? '';
     try {
         $result = $alipayGlobal->authApplyToken(array(
@@ -111,7 +113,7 @@ route($type === 'auth/apply_token/refresh_token', function () use (&$alipayGloba
     }
 });
 
-route($type === 'pay/agreement', function () use (&$alipayGlobal, $currentUrl) {
+routeMap($type === 'pay/agreement', function () use (&$alipayGlobal, $currentUrl) {
     try {
         session_start();
         $result = $alipayGlobal->payAgreement(array(
@@ -176,7 +178,7 @@ route($type === 'pay/agreement', function () use (&$alipayGlobal, $currentUrl) {
     }
 });
 
-route($type === 'notify', function () use (&$alipayGlobal) {
+routeMap($type === 'notify', function () use (&$alipayGlobal) {
     try {
         $notify = $alipayGlobal->getNotify();
         // do something
@@ -187,11 +189,11 @@ route($type === 'notify', function () use (&$alipayGlobal) {
     }
 });
 
-route($type === 'return', function () {
+routeMap($type === 'return', function () {
     echo 'Payment or Authorization completed';
 });
 
-route($type === 'notify/auth/auth_code', function () use (&$alipayGlobal) {
+routeMap($type === 'notify/auth/auth_code', function () use (&$alipayGlobal) {
     try {
         $notify = $alipayGlobal->getNotify();
         // do something
@@ -207,7 +209,7 @@ route($type === 'notify/auth/auth_code', function () use (&$alipayGlobal) {
     }
 });
 
-route($type === 'refund/refund_online', function () use (&$alipayGlobal) {
+routeMap($type === 'refund/refund_online', function () use (&$alipayGlobal) {
     try {
         $result = $alipayGlobal->sendRefund(array(
             'paymentId' => '20181129190741010007000000XXXX',

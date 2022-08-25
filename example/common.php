@@ -1,7 +1,7 @@
 <?php
 require '../vendor/autoload.php';
 require 'data/token.php';
-function route(bool $boolean, callable $callback)
+function routeMap(bool $boolean, callable $callback)
 {
     if ($boolean) {
         $callback();
@@ -11,6 +11,10 @@ function route(bool $boolean, callable $callback)
 
 function getCurrentUrl()
 {
+    if ($opt && isset($opt['webman']) && isset($opt['webman']['request'])) {
+        $request = $opt['webman']['request'];
+        return 'http' . ($request->getLocalPort() === 443 ? 's' : '') . ':' . $request->fullUrl();
+    }
     return 'http' . ($_SERVER['HTTPS'] === 'on' ? 's' : '') .
         '://' . $_SERVER['HTTP_HOST'] .
         (in_array($_SERVER['SERVER_PORT'], array(80, 443, '')) ? '' : ':' . $_SERVER['SERVER_PORT']) .
