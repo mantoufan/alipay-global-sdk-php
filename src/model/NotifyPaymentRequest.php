@@ -4,6 +4,7 @@ namespace Mantoufan\model;
 class NotifyPaymentRequest
 {
     public $httpMethod;
+    public $path;
     public $clientId;
     public $rsqTime;
     public $rsqBody;
@@ -17,6 +18,16 @@ class NotifyPaymentRequest
     public function setHttpMethod($httpMethod)
     {
         $this->httpMethod = $httpMethod;
+    }
+
+    public function getPath()
+    {
+        return $this->path;
+    }
+
+    public function setPath($path)
+    {
+        $this->path = $path;
     }
 
     public function getClientId()

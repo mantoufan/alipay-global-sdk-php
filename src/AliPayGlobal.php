@@ -134,13 +134,32 @@ class AliPayGlobal
         }
     }
 
-    public function getNotify()
+    public function getNotify($params = array())
     {
-        $alipayAcNotify = new AlipayAcNotify();
+        if (empty($params) && isset($_SERVER['REQUEST_METHOD']) && isset($_SERVER['REQUEST_URI']) &&  isset($_SERVER['HTTP_CLIENT_ID']) && isset($_SERVER['HTTP_REQUEST_TIME']) && isset($_SERVER['HTTP_SIGNATURE'])) {
+            $params = array_merge(array(
+                'httpMethod' => $_SERVER['REQUEST_METHOD'],
+                'path' => $_SERVER['REQUEST_URI'],
+                'clientId' => $_SERVER['HTTP_CLIENT_ID'],
+                'rsqTime' => $_SERVER['HTTP_REQUEST_TIME'],
+                'rsqBody' => file_get_contents('php://input'),
+                'signature' => $_SERVER['HTTP_SIGNATURE']
+            ), $params);
+        }
+
+        if (empty($params['merchantPrivateKey'])) $params['merchantPrivateKey'] = $this->merchantPrivateKey;
+        if (empty($params['httpMethod'])) throw new Exception('Http Method cannot be empty');
+        if (empty($params['path'])) throw new Exception('Path cannot be empty');
+        if (empty($params['clientId'])) throw new Exception('Client Id cannot be empty');
+        if (empty($params['rsqTime'])) throw new Exception('RsqTime cannot be empty');
+        if (isset($params['rsqBody']) === false) throw new Exception('RsqBody is undefined');
+        if (empty($params['signature'])) throw new Exception('Signature cannot be empty');
+
+        $alipayAcNotify = new AlipayAcNotify($params);
         $notifyPaymentRequest = $alipayAcNotify->getNotifyPaymentRequest();
         $result = SignatureTool::verify(
             $notifyPaymentRequest->getHttpMethod(),
-            $_SERVER['PHP_SELF'],
+            $notifyPaymentRequest->getPath(),
             $notifyPaymentRequest->getClientId(),
             $notifyPaymentRequest->getRsqTime(),
             $notifyPaymentRequest->getRsqBody(),
@@ -150,21 +169,7 @@ class AliPayGlobal
         if ($result === 0) {
             throw new Exception('Invalid Signature');
         }
-        return $notifyPaymentRequest;
-    }
-
-    public function sendNotifyResponse()
-    {
-        $alipayAcNotify = new AlipayAcNotify();
-        $alipayAcNotify->sendNotifyResponse();
-    }
-
-    public function sendNotifyResponseWithRSA()
-    {
-        $alipayAcNotify = new AlipayAcNotify();
-        $alipayAcNotify->sendNotifyResponseWithRSA(array(
-            'merchantPrivateKey' => $this->merchantPrivateKey,
-        ));
+        return $alipayAcNotify;
     }
 
     public function authConsult($params)

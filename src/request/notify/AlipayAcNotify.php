@@ -6,40 +6,97 @@ use Mantoufan\tool\SignatureTool;
 
 class AlipayAcNotify
 {
+    public function __construct($params)
+    {
+        $this->merchantPrivateKey = $params['merchantPrivateKey'];
+        $this->httpMethod = $params['httpMethod'];
+        $this->path = $params['path'];
+        $this->clientId = $params['clientId'];
+        $this->rsqTime = $params['rsqTime'];
+        $this->rsqBody = $params['rsqBody'];
+        $this->signature = $params['signature'];
+        $this->notifyPaymentRequest = new NotifyPaymentRequest();
+    }
+
     public function getNotifyPaymentRequest()
     {
-        $notifyPaymentRequest = new NotifyPaymentRequest();
-        $notifyPaymentRequest->setHttpMethod($_SERVER['REQUEST_METHOD']);
-        $notifyPaymentRequest->setClientId($_SERVER['HTTP_CLIENT_ID']);
-        $notifyPaymentRequest->setRsqTime($_SERVER['HTTP_REQUEST_TIME']);
-        $notifyPaymentRequest->setRsqBody(file_get_contents('php://input'));
-        if (preg_match('/signature=(?<signature>.*?)(?:$|,)/', $_SERVER['HTTP_SIGNATURE'], $matches)) {
-            $notifyPaymentRequest->setSignature($matches['signature']);
+        $this->notifyPaymentRequest->setHttpMethod($this->httpMethod);
+        $this->notifyPaymentRequest->setPath($this->path);
+        $this->notifyPaymentRequest->setClientId($this->clientId);
+        $this->notifyPaymentRequest->setRsqTime($this->rsqTime);
+        $this->notifyPaymentRequest->setRsqBody($this->rsqBody);
+        if (preg_match('/signature=(?<signature>.*?)(?:$|,)/', $this->signature, $matches)) {
+            $this->notifyPaymentRequest ->setSignature($matches['signature']);
         }
-        return $notifyPaymentRequest;
+        return $this->notifyPaymentRequest ;
     }
 
+    public function getNotifyResponse()
+    {
+        return '{"result":{"resultCode":"SUCCESS","resultMessage":"success","resultStatus":"S"}}';
+    }
+    
     public function sendNotifyResponse()
     {
-        echo '{"result":{"resultCode":"SUCCESS","resultMessage":"success","resultStatus":"S"}}';
+        echo $this->getNotifyResponse();
     }
 
-    public function sendNotifyResponseWithRSA($params = array(
-        'merchantPrivateKey' => '',
-    )) {
+    public function getNotifyResponseWithRSA() {
         $reqTime = date('c', time());
-        $content = '{"result":{"resultCode":"SUCCESS","resultMessage":"success","resultStatus":"S"}}';
-        header('Content-Type:application/json; charset=UTF-8');
-        header('Response-Time:' . $reqTime);
-        header('Client-Id:' . $_SERVER['HTTP_CLIENT_ID']);
-        header('Signature:' . 'algorithm=RSA256,keyVersion=1,signature=' . SignatureTool::sign(
-            $_SERVER['REQUEST_METHOD'],
-            $_SERVER['PHP_SELF'],
-            $_SERVER['HTTP_CLIENT_ID'],
-            $reqTime,
-            $content,
-            $params['merchantPrivateKey']
-        ));
-        echo $content;
+        $reqBody = $this->getNotifyResponse();
+        return array(
+            'headers' => array(
+                'content-type' => 'application/json; charset=UTF-8',
+                'response-time' => $reqTime,
+                'client-id' => $this->notifyPaymentRequest->getClientId(),
+                'signature' => 'algorithm=RSA256,keyVersion=1,signature=' . SignatureTool::sign(
+                    $this->notifyPaymentRequest->getHttpMethod(),
+                    $this->notifyPaymentRequest->getPath(),
+                    $this->notifyPaymentRequest->getClientId(),
+                    $reqTime,
+                    $reqBody,
+                    $this->merchantPrivateKey
+                )
+            ),
+            'body' => $reqBody
+        );
+    }
+
+    public function sendNotifyResponseWithRSA() {
+        $notifyResponseWithRSA = $this->getNotifyResponseWithRSA();
+        foreach ($notifyResponseWithRSA['headers'] as $header => $value) {
+            header($header . ':' . $value);
+        }
+        echo $notifyResponseWithRSA['body'];
+    }
+
+    public function getHttpMethod()
+    {
+        return $this->notifyPaymentRequest->getHttpMethod();
+    }
+
+    public function getPath()
+    {
+        return $this->notifyPaymentRequest->getPath();
+    }
+
+    public function getClientId()
+    {
+        return $this->notifyPaymentRequest->getClientId();
+    }
+
+    public function getRsqTime()
+    {
+        return $this->notifyPaymentRequest->getRsqTime();
+    }
+
+    public function getRsqBody()
+    {
+        return $this->notifyPaymentRequest->getRsqBody();
+    }
+
+    public function getSignature()
+    {
+        return $this->notifyPaymentRequest->getSignature();
     }
 }

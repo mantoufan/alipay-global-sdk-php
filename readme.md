@@ -2,6 +2,19 @@
 ## Alipay Global A+ SDK
 This project is based on [Alipay Global Offical PHP SDK](https://github.com/alipay/global-open-sdk-php)  
 Since official SDK mainly shows how to access the alipay gateway and does not contain complete functions such as authorization and auto debit, I have added some logic and further realized the standard interface of Alipay Global A+
+
+## Attention!
+0.0.3+: `sendNotifyResponse` `sendNotifyResponseWithRSA` are methods of `$notify`, eg:  
+```php
+$notify = $alipayGlobal->getNotify();
+$notify->sendNotifyResponse(); // $alipayGlobal->sendNotifyResponse() is desprecated
+$notify->sendNotifyResponseWithRSA(); // $alipayGlobal->sendNotifyResponseWithRSA() is desprecated
+/* getNotifyResponse and getNotifyResponseWithRSA are added,
+   so you can process it by yourself in memory frameworks like Webman */
+$notifyResponseWithRSA =  $notify->getNotifyResponse();
+$notifyResponseWithRSA =  $notify->getNotifyResponseWithRSA();
+```
+
 ## Demo
 The use and functionality of the SDK have been shown with **Examples** in the project folder
 ## Use
@@ -201,10 +214,36 @@ API: [ac/ams/paymentrn_online](https://global.alipay.com/docs/ac/ams/paymentrn_o
 DEMO: [notify](https://p.yzhan.co/alipay-global-sdk-php/example/?type=notify)
 ```php
 try {
-    $notify = $alipayGlobal->getNotify(); // Get Asynchronous Payment Notifications
+    /* Get Asynchronous Payment Notifications */
+    $notify = $alipayGlobal->getNotify();
+    /* Default Value same as:
+    $notify = $alipayGlobal->getNotify(array(
+        'httpMethod' => $_SERVER['REQUEST_METHOD'],
+        'path' => $_SERVER['REQUEST_URI'],
+        'clientId' => $_SERVER['HTTP_CLIENT_ID'],
+        'rsqTime' => $_SERVER['HTTP_REQUEST_TIME'],
+        'rsqBody' => file_get_contents('php://input'),
+        'signature' => $_SERVER['HTTP_SIGNATURE']
+    ));*/
+    /* Webman Example:
+    $notify = $alipayGlobal->getNotify(array(
+        'httpMethod' => $request->method(),
+        'path' => $request->uri(),
+        'clientId' => $request->header('client-id'),
+        'rsqTime' => $request->header('request-time'),
+        'rsqBody' => $request->rawBody(),
+        'signature' => $request->header('signature')
+    ));*/
+
     // Do something
 
-    $alipayGlobal->sendNotifyResponseWithRSA(); // Tell Alipay Global the notice has been received and there is no need to send it again
+    // Method 1: use header () and echo response
+    $notify->sendNotifyResponseWithRSA(); // Tell Alipay Global the notice has been received and there is no need to send it again
+
+    // Method 2: Or Get headers and body, process it by yourself
+    $notifyResponseWithRSA =  $notify->getNotifyResponseWithRSA();
+    // Webman Example:
+    // response($notifyResponseWithRSA['body'], 200, $notifyResponseWithRSA['headers']);
 } catch (Exception $e) {
     echo $e->getMessage(); // Output Error
 }
@@ -214,15 +253,42 @@ API: [ac/ams/notifyauth](https://global.alipay.com/docs/ac/ams/notifyauth)
 DEMO: [notify/auth/auth_code](https://p.yzhan.co/alipay-global-sdk-php/example/?type=notify/auth/auth_code)
 ```php
 try {
-    $notify = $alipayGlobal->getNotify(); // Get Asynchronous Authorization Notifications
+    /* Get Asynchronous Payment Notifications */
+    $notify = $alipayGlobal->getNotify();
+    /* Default Value same as:
+    $notify = $alipayGlobal->getNotify(array(
+        'httpMethod' => $_SERVER['REQUEST_METHOD'],
+        'path' => $_SERVER['REQUEST_URI'],
+        'clientId' => $_SERVER['HTTP_CLIENT_ID'],
+        'rsqTime' => $_SERVER['HTTP_REQUEST_TIME'],
+        'rsqBody' => file_get_contents('php://input'),
+        'signature' => $_SERVER['HTTP_SIGNATURE']
+    ));*/
+    /* Webman Example:
+    $notify = $alipayGlobal->getNotify(array(
+        'httpMethod' => $request->method(),
+        'path' => $request->uri(),
+        'clientId' => $request->header('client-id'),
+        'rsqTime' => $request->header('request-time'),
+        'rsqBody' => $request->rawBody(),
+        'signature' => $request->header('signature')
+    ));*/
+
     // Do something
+
     $rsqBody = $notify->getRsqBody(); // Get Response Body of Notification
     $authorization_notify_type = $reqBody->authorizationNotifyType; // Determine Notification Type
     if ($authorization_notify_type === 'AUTHCODE_CREATED') { // If Notification Type is sent AuthCode
         $_SESSION['auth_code'] = $reqBody->authCode; // Get AuthCode
     }
 
-    $alipayGlobal->sendNotifyResponseWithRSA(); // Tell Alipay Global the notice has been received and there is no need to send it again
+    // Method 1: use header () and echo response
+    $notify->sendNotifyResponseWithRSA(); // Tell Alipay Global the notice has been received and there is no need to send it again
+
+    // Method 2: Or Get headers and body, process it by yourself
+    $notifyResponseWithRSA =  $notify->getNotifyResponseWithRSA();
+    // Webman Example:
+    // response($notifyResponseWithRSA['body'], 200, $notifyResponseWithRSA['headers']);
 } catch (Exception $e) {
     echo $e->getMessage(); // Output Error
 }

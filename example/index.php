@@ -11,11 +11,10 @@ $alipayGlobal = new Mantoufan\AliPayGlobal(array(
     'endpoint_area' => 'ASIA',
     'merchantPrivateKey' => $config['merchantPrivateKey'],
     'alipayPublicKey' => $config['alipayPublicKey'],
-    'is_sandbox' => true,
+    'is_sandbox' => true
 ));
+/* Webman: $currentUrl = 'http:' . $request->fullUrl(); */
 $currentUrl = getCurrentUrl();
-/* Webman: please pass (Request $request)
-   $currentUrl = getCurrentUrl(array('webman' => array('request' => $request))); */
 $type = $_GET['type'] ?? '';
 routeMap($type === 'pay/cashier', function () use (&$alipayGlobal, $currentUrl) {
     try {
@@ -183,7 +182,7 @@ routeMap($type === 'notify', function () use (&$alipayGlobal) {
         $notify = $alipayGlobal->getNotify();
         // do something
 
-        $alipayGlobal->sendNotifyResponseWithRSA();
+        $notify->sendNotifyResponseWithRSA();
     } catch (Exception $e) {
         echo $e->getMessage();
     }
@@ -203,7 +202,7 @@ routeMap($type === 'notify/auth/auth_code', function () use (&$alipayGlobal) {
             $_SESSION['auth_code'] = $reqBody->authCode;
         }
 
-        $alipayGlobal->sendNotifyResponseWithRSA();
+        $notify->sendNotifyResponseWithRSA();
     } catch (Exception $e) {
         echo $e->getMessage();
     }
